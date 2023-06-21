@@ -34,30 +34,28 @@ int main() {
 		len++;
 
 		c = ism43362_exchange(b, len, b, BUFFLEN);
+		if (c < -10000) {printf("ism43362_exchange error #%d\n", c); continue;} // Go to start of AT command loop (exchange error)
 		tc = 0;
 
 		// Remove leading CRLFs
 		if (c >= 2 && b[0] == '\r' && b[1] == '\n') {c -= 2; memmove(b, b+2, c);}
 		if (c >= 2 && b[0] == '\r' && b[1] == '\n') {c -= 2; memmove(b, b+2, c);}
-		if (c < -1000000) {
-			if (b[0] == '\r' && b[1] == '\n') {c += 2; memmove(b, b+2, -c-1000000);}
-			if (b[0] == '\r' && b[1] == '\n') {c += 2; memmove(b, b+2, -c-1000000);}
+		if (c < 0) {
+			if (b[0] == '\r' && b[1] == '\n') {c += 2; memmove(b, b+2, -c);}
+			if (b[0] == '\r' && b[1] == '\n') {c += 2; memmove(b, b+2, -c);}
 		}
 
 		// Cycle if buffer is not big enough
-		while (c < -1000000) {
-			c=-c - 1000000; 
+		while (c < 0) {
+			c = -c; 
 			tc += c - 10; 
 			print_answer(b, c - 10);
 			memmove(b, b + c - 10, 10);
 			c = ism43362_exchange(NULL, -1, b + 10, BUFFLEN-10);
-			if (c >= 0) c += 10;
-			if (c <= -1000000) c -= 10;
+			if (c < -10000) {printf("ism43362_exchange error #%d\n", c); continue;} // Go to start of AT command loop (exchange error)
+			if (c < 0) c -= 10; else c += 10;
 		}
 
-		// Go to start of AT command loop if exchange error
-		if (c<0) {printf("ism43362_exchange error #%d\n", c); continue;}
-		
 		// Remove answer tail (if OK)
 		if (c >= 4 && b[c-4] == '\r' && b[c-3] == '\n' && b[c-2] == '>' && b[c-1] == ' ') c -= 4; // WiFi module prompt for new command
 		if (c >= 2 && b[c-2] ==  'O' && b[c-1] ==  'K') c -= 2; // "OK" answer
