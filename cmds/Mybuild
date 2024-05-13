@@ -12,3 +12,14 @@ module ism43362_test {
 	depends third_party.bsp.st_bsp_api
 }
 
+@App
+@AutoCmd
+@Cmd(name = "wifi_test_hal", help = "B-L475E-IOT01A WiFi module test (CUBE based)")
+
+@BuildDepends(third_party.bsp.st_bsp_api)
+module wifi_test_hal {
+	source "wifi_test_hal.c"
+
+	depends third_party.bsp.st_bsp_api
+}
+

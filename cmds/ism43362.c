@@ -27,12 +27,81 @@ static inline int gpio_setup_out_mode(unsigned short port, gpio_mask_t pins, int
 	return ret;
 }
 
+#include "stm32l475e_iot01.h"
+static int SPI3_HAL_setup(void) {
+	// HAL based spi configuration
+
+/*	__HAL_RCC_SPI3_CLK_ENABLE();
+	__HAL_RCC_GPIOB_CLK_ENABLE();
+	__HAL_RCC_GPIOC_CLK_ENABLE();
+	__HAL_RCC_GPIOE_CLK_ENABLE();
+*/
+	/* configure SPI pins */
+	GPIO_InitTypeDef GPIO_Init;
+	memset(&GPIO_Init, 0, sizeof(GPIO_Init));
+
+	/* configure SPI soft NSS pin for WiFi module */
+	HAL_GPIO_WritePin(GPIOE, GPIO_PIN_0, GPIO_PIN_SET);
+	GPIO_Init.Pin       =  GPIO_PIN_0;
+	GPIO_Init.Mode      = GPIO_MODE_OUTPUT_PP;
+	GPIO_Init.Pull      = GPIO_NOPULL;
+	GPIO_Init.Speed     = GPIO_SPEED_FREQ_MEDIUM;
+	HAL_GPIO_Init(GPIOE, &GPIO_Init);
+
+	/* configure SPI CLK pin */
+	GPIO_Init.Pin       =  GPIO_PIN_10;
+	GPIO_Init.Mode      = GPIO_MODE_AF_PP;
+	GPIO_Init.Pull      = GPIO_NOPULL;
+	GPIO_Init.Speed     = GPIO_SPEED_FREQ_MEDIUM;
+	GPIO_Init.Alternate = GPIO_AF6_SPI3;
+	HAL_GPIO_Init(GPIOC, &GPIO_Init);
+
+	/* configure SPI MISO pin */
+	GPIO_Init.Pin       = GPIO_PIN_11;
+	GPIO_Init.Mode      = GPIO_MODE_AF_PP;
+	GPIO_Init.Pull      = GPIO_PULLUP;
+	GPIO_Init.Speed     = GPIO_SPEED_FREQ_MEDIUM;
+	GPIO_Init.Alternate = GPIO_AF6_SPI3;
+	HAL_GPIO_Init(GPIOC,&GPIO_Init);
+
+	/* configure SPI MOSI pin */
+	GPIO_Init.Pin       = GPIO_PIN_12;
+	GPIO_Init.Mode      = GPIO_MODE_AF_PP;
+	GPIO_Init.Pull      = GPIO_NOPULL;
+	GPIO_Init.Speed     = GPIO_SPEED_FREQ_MEDIUM;
+	GPIO_Init.Alternate = GPIO_AF6_SPI3;
+	HAL_GPIO_Init(GPIOC, &GPIO_Init);
+
+	/* SPI hardware init */
+/*	SPI_HandleTypeDef hspi;
+	memset(&hspi, 0, sizeof(hspi));
+	hspi.Instance = SPI3;
+	hspi.Init.Mode              = SPI_MODE_MASTER;
+	hspi.Init.Direction         = SPI_DIRECTION_2LINES;
+	hspi.Init.DataSize          = SPI_DATASIZE_16BIT;
+	hspi.Init.CLKPolarity       = SPI_POLARITY_LOW;
+	hspi.Init.CLKPhase          = SPI_PHASE_1EDGE;
+	hspi.Init.NSS               = SPI_NSS_SOFT;
+	hspi.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_8; // 80/8= 10MHz (Inventek WIFI module supports up to 20MHz)
+	hspi.Init.FirstBit          = SPI_FIRSTBIT_MSB;
+	hspi.Init.TIMode            = SPI_TIMODE_DISABLE;
+	hspi.Init.CRCCalculation    = SPI_CRCCALCULATION_DISABLE;
+	hspi.Init.CRCPolynomial     = 0;
+
+	for (int res = HAL_SPI_Init(&hspi); res != HAL_OK;) return res;
+*/
+	return 0;
+}
+
 int ism43362_init() {
 	// WiFi module init (WakeUp, DRdy, Rst, yellow LED)
 	gpio_setup_out_mode(GPIO_PORT_B, 1<<13, GPIO_MODE_OUT_PUSH_PULL, GPIO_PIN_LOW);	// Wake up pin
 	gpio_setup_mode(GPIO_PORT_E, 1<<1, GPIO_MODE_IN);				// Data ready pin
 	gpio_setup_out_mode(GPIO_PORT_E, 1<<8, GPIO_MODE_OUT_PUSH_PULL, GPIO_PIN_HIGH);	// Reset pin
 	gpio_setup_out_mode(GPIO_PORT_C, 1<<9, GPIO_MODE_OUT_PUSH_PULL, GPIO_PIN_HIGH); // WiFi LED pin
+
+	// SPI3 HAL setup
+	for (int res = SPI3_HAL_setup(); res;) {return -10500;}
 
 	// Get SPI device pointer
 	spi_dev = spi_dev_by_id(WIFI_SPI_BUS);
@@ -75,7 +144,7 @@ int ism43362_init() {
         	good size for rxb is about char[2048]
         rxl - its length
 	if txb==NULL or txl==0 only reading performed
-	if txc<=0 strlen(txb) used and ending \r added if nesessary
+	if txl<=0 strlen(txb) used and ending \r added if nesessary
 */
 
 int ism43362_exchange(char *txb, int txl, char *rxb, int rxl) {
